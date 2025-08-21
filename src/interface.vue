@@ -79,7 +79,7 @@ const opt = computed(() => fieldMeta.value?.options ?? {});
 const geometryField = computed<string>(() => opt.value.geometry_field || 'geometry');
 const styleUrl = computed<string>(() => opt.value.map_style || 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json');
 const cluster = computed<boolean>(() => Boolean(opt.value.cluster ?? true));
-const allowCreate = computed<boolean>(() => Boolean(opt.value.allow_create ?? false));
+const allowCreate = computed<boolean>(() => false && Boolean(opt.value.allow_create ?? false)); // TODO: this is broken
 const fitOnLoad = computed<boolean>(() => Boolean(opt.value.fit_on_load ?? true));
 const limit = computed<number>(() => {
   // Prefer interface option, then prop, then fallback; coerce safely
@@ -500,12 +500,18 @@ function toGeoJSON(items: any[], relatedPkFieldName: string, geometryField: stri
   return { type: 'FeatureCollection', features: feats } as any;
 }
 
-function fitToData() {
+function fitToData(element?: any, { padding = 100, duration = 0, maxZoom = 14 } = {}) {
   if (!map.value) return;
+  const pk = relatedPkFieldName.value;
   const gj = toGeoJSON(items.value, relatedPkFieldName.value, geometryField.value);
-  if (!gj.features.length) return;
+  if (element) {
+    element = Array.isArray(element) ? element : [element];
+    const ids = element.map((e: any) => e[pk]);
+    const features = gj.features.filter((f: any) => ids.includes(f[pk]));
+    gj.features = features.length ? features : gj.features;
+  }
   const bbox = turfBBox(gj as any);
-  map.value.fitBounds(bbox as any, { padding: 100, duration: 0, maxZoom: 14 });
+  map.value.fitBounds(bbox as any, { padding, duration, maxZoom });
 }
 
 // Minimal bbox util (avoid turf import)
@@ -513,6 +519,7 @@ function turfBBox(fc: any): [number, number, number, number] {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const f of fc.features) {
     const g = f.geometry;
+    // console.log(g);
     const coords: number[][] = g.type === 'Point'
       ? [g.coordinates]
       : g.type === 'LineString'
@@ -526,7 +533,13 @@ function turfBBox(fc: any): [number, number, number, number] {
       : g.type === 'MultiPolygon'
       ? g.coordinates.flat(2)
       : g.type === 'GeometryCollection'
-      ? g.geometries.flatMap((geom: any) => geom.coordinates)
+      ? (() => {
+          const box = turfBBox({ type: 'FeatureCollection', features: g.geometries.map((geom: any) => ({
+            type: 'Feature',
+            geometry: geom,
+          })) });
+          return [[box[0], box[1]], [box[2], box[3]]];
+        })()
       : [];
     for (const [x, y] of coords) {
       if (x && y) {
@@ -814,6 +827,14 @@ const itemCountText = computed(() =>
 
       <div class="actions top" :class="width">
 
+        <v-icon
+          v-if="!disabled"
+          v-tooltip.bottom="t('zoom')"
+          rounded icon :secondary="true"
+          @click.stop="fitToData(selection.length ? selection : null, { duration: 500 })"
+          name="zoom_in"
+        />
+
         <v-button
           v-if="!disabled && selectedKeys.length"
           v-tooltip.bottom="t('deselect')"
@@ -887,11 +908,6 @@ const itemCountText = computed(() =>
               }"
               @click="selectItem(element[relationInfo!.relatedPrimaryKeyField.field])"
 						>
-							<render-template
-								:collection="relationInfo?.relatedCollection.collection"
-								:item="element"
-								:template="templateWithDefaults"
-							/>
 
               <v-icon
                 v-if="element[geometryField] == null"
@@ -899,6 +915,20 @@ const itemCountText = computed(() =>
                 v-tooltip="t('no_location')"
                 style="color: var(--theme--foreground-subdued);"
               />
+
+              <!-- <v-icon
+                v-else-if="!disabled"
+                class="zoom-icon"
+                v-tooltip.bottom="t('zoom_to_item')"
+                @click.stop="fitToData(element, { duration: 500 })"
+                name="zoom_in"
+              /> -->
+
+							<render-template
+								:collection="relationInfo?.relatedCollection.collection"
+								:item="element"
+								:template="templateWithDefaults"
+							/>
 
 							<div class="spacer" />
 
@@ -988,6 +1018,10 @@ const itemCountText = computed(() =>
       color: var(--theme--form--field--input--foreground-subdued);
       white-space: nowrap;
     }
+  }
+  .v-list .v-list-item {
+    display: flex;
+    gap: 12px;
   }
   .v-list .v-list-item .item-actions {
     display: flex;
