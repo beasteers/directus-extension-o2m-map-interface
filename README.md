@@ -12,22 +12,10 @@ A custom interface for [Directus](https://directus.io) that lets you view and ma
 
 ## Installation
 
-1. Clone this repository into your Directus extensions folder:
-
-   ```bash
-   git clone https://github.com/YOUR_ORG/directus-extension-o2m-map-interface.git
-   ```
-
-2. Build the extension:
-
-   ```bash
-   cd directus-extension-o2m-map-interface
-   npm install
-   npm run build
-   ```
-
-3. Restart your Directus instance.  
-   The new interface will be available as **O2M Map Interface** in your project settings.
+```bash
+git clone https://github.com/beasteers/directus-extension-o2m-map-interface.git
+docker compose up -d --build
+```
 
 ## Usage
 

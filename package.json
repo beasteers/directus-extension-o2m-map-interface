@@ -2,12 +2,22 @@
 	"name": "directus-extension-o2m-map-interface",
 	"description": "Please enter a description for your extension",
 	"icon": "extension",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"keywords": [
 		"directus",
 		"directus-extension",
 		"directus-extension-interface"
 	],
+	"homepage": "https://github.com/beasteers/directus-extension-o2m-map-interface",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/beasteers/directus-extension-o2m-map-interface.git"
+	},
+	"author": "Bea Steers",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/beasteers/directus-extension-o2m-map-interface/issues"
+	},
 	"type": "module",
 	"files": [
 		"dist"
